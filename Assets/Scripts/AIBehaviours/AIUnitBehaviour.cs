@@ -2,6 +2,7 @@
 //By Joss Moo-Young 
 using System.Collections.Generic;
 using UnityEngine;
+using static UnityEngine.GraphicsBuffer;
 
 public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
 {
@@ -101,7 +102,7 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
         if (detectedEnemies.Count > 0)
         {
             Unit enemy = detectedEnemies[0];
-            MoveTo(enemy.transform.position, false); // Déplace l'unité vers l'ennemi
+            locomotion.MoveTo(enemy.transform.position);
             Attack(enemy); 
 
             
@@ -145,12 +146,18 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
     {
         Debug.Log(gameObject.name + ": AttackMove State");
 
-        // Exit condition of the state
+        
         if (detectedEnemies.Count > 0)
         {
-            //
-            Stop();
-            Debug.DrawLine(transform.position, detectedEnemies[0].transform.position, Color.red);
+            target = detectedEnemies[0]; // Sélectionner le premier ennemi détecté comme cible
+            if (Vector3.Distance(transform.position, target.transform.position) <= attackRange)
+            {
+                Attack(target); // Attaquer l'ennemi
+            }
+            else
+            {
+                target = null; // Réinitialiser la cible si elle sort de portée
+            }
         }
         else
         {
@@ -247,11 +254,31 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
     // Attack Command
     public bool Attack(Unit unit)
     {
-        //TODO
-        Debug.Log(gameObject.name + ": Attacking " + unit.gameObject.name);
-        Debug.DrawLine(transform.position, unit.transform.position, Color.red, 1.0f, false);
-        return true;
+
+        if (unit == null) return false;
+
+        
+        if (Vector3.Distance(transform.position, unit.transform.position) <= attackRange)
+        {
+           
+            launcher.BeginTriggerPull(); // Tirer un projectile
+            Vector3 direction = unit.transform.position - transform.position;
+            AimTurretAtTarget(direction);
+            Debug.Log(gameObject.name + ": Attacking " + unit.gameObject.name);
+            Debug.DrawLine(transform.position, unit.transform.position, Color.red, 1.0f, false);
+            return true;
+        }
+        else
+        {
+            Debug.Log(gameObject.name + ": Target is out of range");
+            return false;
+        }
     }
+    private void AimTurretAtTarget(Vector3 direction)
+    {
+        Quaternion targetRotation = Quaternion.LookRotation(direction);
+        turretControl.transform.rotation = targetRotation;
+     }
 
     // Attack-Move command
     public bool AttackMove(Vector3 targetLocation)
@@ -264,7 +291,7 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
         return locomotion.MoveTo(moveLocation, false);
     }
 
-    // Move Command
+    
     public bool MoveTo(Vector3 moveTargetPosition, bool shouldQueue)
     {
         commandState = AICommandState.Move;
@@ -274,7 +301,7 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
         return locomotion.MoveTo(moveTargetPosition, shouldQueue);
     }
 
-    // Stop self
+    
     public void Stop()
     {
         locomotion.Stop();
