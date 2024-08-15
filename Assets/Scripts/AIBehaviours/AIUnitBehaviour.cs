@@ -24,6 +24,10 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
 
     Vector3 moveLocation;
 
+    private Vector3 originalPosition; 
+    private float defendTimer; 
+    private const float defendTimeout = 5f;
+
     enum AICommandState
     {
         Idle,
@@ -73,19 +77,50 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
         turretControl = GetComponentInChildren<TurretControl>();
         launcher = GetComponentInChildren<Launcher>();
         unitLayerMask = LayerMask.GetMask("Unit");
+
+        //Defending
+        originalPosition = transform.position;
+        defendTimer = 0f;
     }
 
     private void IdleBehaviour()
     {
-        Debug.Log(gameObject.name + ": Idle State");
-        if (target == null)
+
+        if (detectedEnemies.Count > 0)
         {
-            DebugDrawRanges(); // Debug line drawing
+            
+            commandState = AICommandState.Defend;
         }
+
+       
+        DebugDrawRanges();
     }
     private void DefendBehaviour()
     {
-        throw new System.NotImplementedException();
+        Debug.Log(gameObject.name + ": Defend State");
+        if (detectedEnemies.Count > 0)
+        {
+            Unit enemy = detectedEnemies[0];
+            MoveTo(enemy.transform.position, false); // Déplace l'unité vers l'ennemi
+            Attack(enemy); 
+
+            
+            defendTimer = 0f;
+        }
+        else
+        {
+            // Si aucun ennemi n'est détecté, augmenter le timer
+            defendTimer += Time.fixedDeltaTime;
+
+            // Si le timer dépasse le délai d'attente, retourner à Idle
+            if (defendTimer >= defendTimeout)
+            {
+                commandState = AICommandState.Idle;
+                Debug.Log(gameObject.name + ": No enemies detected, switching to Idle");
+                // Retourner à la position d'origine
+                MoveTo(originalPosition, true);
+            }
+        }
     }
     private void MoveBehaviour()
     {
