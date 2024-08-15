@@ -19,7 +19,52 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
     List<Unit> detectedEnemies = new List<Unit>(); // List of enemies currently known by this Unit on by its own vision in DetectEnemyUnits()
     Unit target = null; // What enemy is this AI targeting? If no target, then null
 
-    LayerMask unitLayerMask ; // For use in Physics.Raycast, Physics.OverlapSphere etc. to find other Units
+    LayerMask unitLayerMask; // For use in Physics.Raycast, Physics.OverlapSphere etc. to find other Units
+    float positionErrorMargin = 10;
+
+    Vector3 moveLocation;
+
+    enum AICommandState
+    {
+        Idle,
+        Defend,
+        Move,
+        Attack,
+        AttackMove
+
+    }
+    //this variable will hold our current state
+    AICommandState commandState = AICommandState.Idle;
+
+
+
+
+    private void FixedUpdate()
+    {
+        DetectEnemyUnits(); // DetectEnemyUnits fills the List detectedEnemies with units within detectionRange and LOS
+        switch (commandState)
+        {
+            case AICommandState.Idle:
+                IdleBehaviour();
+                break;
+            case AICommandState.Defend:
+                DefendBehaviour();
+                break;
+            case AICommandState.Move:
+                MoveBehaviour();
+                break;
+            case AICommandState.Attack:
+                AttackBehaviour();
+                break;
+            case AICommandState.AttackMove:
+                AttackMoveBehaviour();
+                break;
+        }
+
+
+    }
+
+
 
     private void Start()
     {
@@ -30,27 +75,75 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
         unitLayerMask = LayerMask.GetMask("Unit");
     }
 
-    private void FixedUpdate()
-    {
-        DetectEnemyUnits(); // DetectEnemyUnits fills the List detectedEnemies with units within detectionRange and LOS
-        IdleBehaviour();
-    }
-
     private void IdleBehaviour()
     {
+        Debug.Log(gameObject.name + ": Idle State");
         if (target == null)
         {
             DebugDrawRanges(); // Debug line drawing
         }
     }
-  
+    private void DefendBehaviour()
+    {
+        throw new System.NotImplementedException();
+    }
+    private void MoveBehaviour()
+    {
+
+        Debug.Log(gameObject.name + ": Move State");
+        // Exit condition of the state
+
+        bool shouldExist = Vector3.Distance(transform.position, moveLocation) < positionErrorMargin;
+
+        if (shouldExist)
+        {
+            commandState = AICommandState.Idle;
+        }
+    }
+
+
+    private void AttackBehaviour()
+    {
+        Debug.Log(gameObject.name + ": Attack State");
+    }
+    private void AttackMoveBehaviour()
+    {
+        Debug.Log(gameObject.name + ": AttackMove State");
+
+        // Exit condition of the state
+        if (detectedEnemies.Count > 0)
+        {
+            //
+            Stop();
+            Debug.DrawLine(transform.position, detectedEnemies[0].transform.position, Color.red);
+        }
+        else
+        {
+            if (locomotion.GetFinalTargetLocation() != moveLocation)
+            {
+                locomotion.MoveTo(moveLocation, false);
+            }
+
+        }
+
+        bool shouldExist = Vector3.Distance(transform.position, moveLocation) < positionErrorMargin;
+
+        if (shouldExist)
+        {
+            commandState = AICommandState.Idle;
+        }
+
+
+
+
+    }
     //Check if there is line of sight to the unit within the provided range
     private bool CanSee(Unit unit, float range)
     {
         Vector3 toEnemy = unit.transform.position - transform.position;
         Ray LOSRay = new Ray(transform.position, toEnemy);
 
-        RaycastHit[] hitInfo = Physics.RaycastAll(LOSRay, range, unitLayerMask);
+        RaycastHit[] hitInfo = Physics.RaycastAll(LOSRay, range);
 
         if (hitInfo.Length > 0)
         {
@@ -128,16 +221,20 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
     // Attack-Move command
     public bool AttackMove(Vector3 targetLocation)
     {
-        //TODO
+        commandState = AICommandState.AttackMove;
+        moveLocation = targetLocation;
+
         Debug.Log(gameObject.name + ": Attack-Move to location: " + targetLocation);
         Debug.DrawLine(transform.position, targetLocation, Color.red, 1.0f, false);
-        return true;
+        return locomotion.MoveTo(moveLocation, false);
     }
 
     // Move Command
     public bool MoveTo(Vector3 moveTargetPosition, bool shouldQueue)
     {
-        //TODO: This should cancel other commands
+        commandState = AICommandState.Move;
+        moveLocation = moveTargetPosition;
+
         Debug.Log(gameObject.name + ": Move to: " + moveTargetPosition);
         return locomotion.MoveTo(moveTargetPosition, shouldQueue);
     }
