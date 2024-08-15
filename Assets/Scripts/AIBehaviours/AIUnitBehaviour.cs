@@ -126,7 +126,7 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
     {
 
         Debug.Log(gameObject.name + ": Move State");
-        // Exit condition of the state
+    
 
         bool shouldExist = Vector3.Distance(transform.position, moveLocation) < positionErrorMargin;
 
