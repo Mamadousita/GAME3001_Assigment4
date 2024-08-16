@@ -1,8 +1,5 @@
-//This is the only MonoBehaviour-derived class you may modify for this challenge
-//By Joss Moo-Young 
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 
 public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
 {
@@ -11,7 +8,7 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
     [SerializeField]
     private float attackRange = 60; // Range to attack enemies
 
-    //Components attached to this gameobject, that this AIUnitBehaviour controls
+    // Components attached to this gameobject, that this AIUnitBehaviour controls
     Unit self; // Responsible for teams, hit points
     TankLocomotion locomotion; // Responsible for movement, pathfinding
     TurretControl turretControl; // Responsible for aiming
@@ -36,13 +33,10 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
         Move,
         Attack,
         AttackMove
-
     }
-    //this variable will hold our current state
+
+    // This variable will hold our current state
     AICommandState commandState = AICommandState.Idle;
-
-
-
 
     private void FixedUpdate()
     {
@@ -65,11 +59,7 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
                 AttackMoveBehaviour();
                 break;
         }
-
-
     }
-
-
 
     private void Start()
     {
@@ -79,23 +69,21 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
         launcher = GetComponentInChildren<Launcher>();
         unitLayerMask = LayerMask.GetMask("Unit");
 
-        //Defending
+        // Defending
         originalPosition = transform.position;
         defendTimer = 0f;
     }
 
     private void IdleBehaviour()
     {
-
         if (detectedEnemies.Count > 0)
         {
-            
             commandState = AICommandState.Defend;
         }
 
-       
         DebugDrawRanges();
     }
+
     private void DefendBehaviour()
     {
         Debug.Log(gameObject.name + ": Defend State");
@@ -104,30 +92,24 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
             Unit enemy = detectedEnemies[0];
             locomotion.MoveTo(enemy.transform.position);
             Attack(enemy); 
-
-            
             defendTimer = 0f;
         }
         else
         {
-            // Si aucun ennemi n'est détecté, augmenter le timer
             defendTimer += Time.fixedDeltaTime;
 
-            // Si le timer dépasse le délai d'attente, retourner à Idle
             if (defendTimer >= defendTimeout)
             {
                 commandState = AICommandState.Idle;
                 Debug.Log(gameObject.name + ": No enemies detected, switching to Idle");
-                // Retourner à la position d'origine
                 MoveTo(originalPosition, true);
             }
         }
     }
+
     private void MoveBehaviour()
     {
-
         Debug.Log(gameObject.name + ": Move State");
-    
 
         bool shouldExist = Vector3.Distance(transform.position, moveLocation) < positionErrorMargin;
 
@@ -137,26 +119,25 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
         }
     }
 
-
     private void AttackBehaviour()
     {
         Debug.Log(gameObject.name + ": Attack State");
     }
+
     private void AttackMoveBehaviour()
     {
         Debug.Log(gameObject.name + ": AttackMove State");
 
-        
         if (detectedEnemies.Count > 0)
         {
-            target = detectedEnemies[0]; // Sélectionner le premier ennemi détecté comme cible
+            target = detectedEnemies[0]; // Select the first detected enemy as the target
             if (Vector3.Distance(transform.position, target.transform.position) <= attackRange)
             {
-                Attack(target); // Attaquer l'ennemi
+                Attack(target); // Attack the enemy
             }
             else
             {
-                target = null; // Réinitialiser la cible si elle sort de portée
+                target = null; // Reset the target if out of range
             }
         }
         else
@@ -165,7 +146,6 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
             {
                 locomotion.MoveTo(moveLocation, false);
             }
-
         }
 
         bool shouldExist = Vector3.Distance(transform.position, moveLocation) < positionErrorMargin;
@@ -174,12 +154,9 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
         {
             commandState = AICommandState.Idle;
         }
-
-
-
-
     }
-    //Check if there is line of sight to the unit within the provided range
+
+    // Check if there is line of sight to the unit within the provided range
     private bool CanSee(Unit unit, float range)
     {
         Vector3 toEnemy = unit.transform.position - transform.position;
@@ -207,18 +184,18 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
         return false;
     }
 
-    //Find enemies
+    // Find enemies
     private void DetectEnemyUnits()
     {
         detectedEnemies.Clear();
         Team myTeam = GetComponent<Unit>().Team;
 
-        //Assign new variable the return value from OverlapSphere
+        // Assign new variable the return value from OverlapSphere
         Collider[] colliders = Physics.OverlapSphere(transform.position, detectionRange, unitLayerMask);
 
         foreach (Collider collider in colliders)
         {
-            //Find out if it is a Unit
+            // Find out if it is a Unit
             Unit contact = collider.GetComponent<Unit>();
             if (contact == null) continue; // skip this collider; it is not a Unit.
 
@@ -228,57 +205,72 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
 
             if (CanSee(contact, detectionRange))
             {
-                //Has LOS to the enemy
+                // Has LOS to the enemy
                 detectedEnemies.Add(contact);
-                //Debug.DrawLine(transform.position, contact.transform.position, Color.yellow);
             }
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     private void DebugDrawRanges()
     {
-        //Current target
+        // Current target
         if (target)
         {
             Debug.DrawLine(transform.position, target.transform.position, Color.red);
         }
 
-        //detectionRange
+        // detectionRange
         DebugDrawing.DrawCircleDotted(transform.position, Quaternion.Euler(90, 0, 0), detectionRange, 32, 2, 16, Color.yellow, Time.fixedDeltaTime, false);
     }
 
     // Attack Command
     public bool Attack(Unit unit)
     {
-
         if (unit == null) return false;
 
-        
-        if (Vector3.Distance(transform.position, unit.transform.position) <= attackRange)
+        float distanceToTarget = Vector3.Distance(transform.position, unit.transform.position);
+
+        // Check if target is out of attack range or too close
+        if (distanceToTarget > attackRange || distanceToTarget < attackRange / 2)
         {
-           
-            launcher.BeginTriggerPull(); // Tirer un projectile
-            Vector3 direction = unit.transform.position - transform.position;
-            AimTurretAtTarget(direction);
-            Debug.Log(gameObject.name + ": Attacking " + unit.gameObject.name);
-            Debug.DrawLine(transform.position, unit.transform.position, Color.red, 1.0f, false);
-            return true;
+            // Move to the edge of the attack range
+            Vector3 directionToTarget = (unit.transform.position - transform.position).normalized;
+            Vector3 firingPosition = unit.transform.position - directionToTarget * attackRange;
+
+            locomotion.MoveTo(firingPosition, false);
+            
+
+            // Stop moving once within range
+            if (Vector3.Distance(transform.position, firingPosition) <= positionErrorMargin)
+            {
+                locomotion.Stop();
+                AimAndShoot(unit);
+            }
         }
         else
         {
-            Debug.Log(gameObject.name + ": Target is out of range");
-            return false;
+            // If within attack range, stop and shoot
+            locomotion.Stop();
+            AimAndShoot(unit);
         }
+
+        return true;
     }
+
+    private void AimAndShoot(Unit unit)
+    {
+        Vector3 direction = unit.transform.position - transform.position;
+        AimTurretAtTarget(direction);
+        launcher.BeginTriggerPull();
+        Debug.Log(gameObject.name + ": Attacking " + unit.gameObject.name);
+        Debug.DrawLine(transform.position, unit.transform.position, Color.red, 1.0f, false);
+    }
+
     private void AimTurretAtTarget(Vector3 direction)
     {
         Quaternion targetRotation = Quaternion.LookRotation(direction);
         turretControl.transform.rotation = targetRotation;
-     }
+    }
 
     // Attack-Move command
     public bool AttackMove(Vector3 targetLocation)
@@ -291,7 +283,6 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
         return locomotion.MoveTo(moveLocation, false);
     }
 
-    
     public bool MoveTo(Vector3 moveTargetPosition, bool shouldQueue)
     {
         commandState = AICommandState.Move;
@@ -301,7 +292,6 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
         return locomotion.MoveTo(moveTargetPosition, shouldQueue);
     }
 
-    
     public void Stop()
     {
         locomotion.Stop();
