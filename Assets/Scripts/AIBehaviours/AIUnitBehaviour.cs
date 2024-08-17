@@ -1,3 +1,6 @@
+//101438689 Kourosh Kalatian
+// Mamadou Sita Diallo 101541739
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -294,6 +297,7 @@ public class AIUnitBehaviour : MonoBehaviour, IAttackMoveCommandable
 
     public void Stop()
     {
+        
         locomotion.Stop();
     }
 }
